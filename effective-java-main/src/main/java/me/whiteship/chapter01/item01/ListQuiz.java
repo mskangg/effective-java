@@ -8,6 +8,7 @@ public class ListQuiz {
 
     public static void main(String[] args) {
         List<Integer> numbers = new ArrayList();
+        numbers.add(10);
         numbers.add(100);
         numbers.add(20);
         numbers.add(44);
@@ -17,8 +18,10 @@ public class ListQuiz {
 
         Comparator<Integer> desc = (o1, o2) -> o2 - o1;
 
-        numbers.sort(desc.reversed());
+        numbers.sort(desc);
+        System.out.println(numbers);
 
+        numbers.sort(desc.reversed());
         System.out.println(numbers);
     }
 }
