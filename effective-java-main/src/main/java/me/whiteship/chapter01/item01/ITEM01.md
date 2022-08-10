@@ -68,3 +68,29 @@
     - 단, private 필드는 아직도 선언할 수 없다.
 - 질문1) 내림차순으로 정렬하는 Comparator를 만들고 List<Integer>를 정렬하라. [19줄](./ListQuiz.java)
 - 질문2) 질문1에서 만든 Comparator를 사용해서 오름차순으로 정렬하라. [24줄](./ListQuiz.java)
+
+## 완벽 공략 4. 서비스 제공자 프레임워크
+
+### 확장 가능한 애플리케이션을 만드는 방법
+
+- 주요 구성 요소
+    - 서비스 제공자 인터페이스 (SPI)와 서비스 제공자 (서비스 구현체)
+    - 서비스 제공자 등록 API (서비스 인터페이스의 구현체를 등록하는 방법)
+    - 서비스 접근 API (서비스의 클라이언트가 서비스 인터페이스의 인스턴스를 가져올 때 사용하는 API)
+- 다양한 변형
+    - 브릿지 패턴
+    - 의존 객체 주입 프레임워크
+    - java.util.ServiceLoader
+        - https://docs.oracle.com/javase/tutorial/sound/SPI-intro.html
+        - https://docs.oracle.com/javase/tutorial/ext/basics/spi.html
+
+## 완벽 공략 5. 리플렉션
+
+### reflection
+
+- 클래스로더를 통해 읽어온 클래스 정보(거울에 반사”된 정보)를 사용하는 기술
+- 리플렉션을 사용해 클래스를 읽어오거나, 인스턴스를 만들거나, 메소드를 실행하거나, 필드의 값을 가져오거나 변경하는 것이 가능하다.
+- 언제 사용할까?
+    - 특정 애노테이션이 붙어있는 필드 또는 메소드 읽어오기 (JUnit, Spring)
+    - 특정 이름 패턴에 해당하는 메소드 목록 가져와 호출하기 (getter, setter)
+- https://docs.oracle.com/javase/tutorial/reflect/
