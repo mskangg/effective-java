@@ -308,3 +308,137 @@ P21, 가변인수 (varargs) 매개변수를 여러 개 사용할 수 있다.
     - 대표적으로 @RequestBody에서 사용되는 ObjectMapper가 기본생성자로 객체를 생성하고 자바빈 규약에 맞게 설정된 getter를 찾아 필드를 바인딩한다.
 - 하지만 실제로 오늘날 자바빈 스팩 중에서도 기본생성자와 getter, setter가 주로 쓰는 이유는?
     - JPA나 스프링과 같은 여러 프레임워크에서 리플렉션을 통해 특정 객체의 값을 조회하거나 설정하기 때문입니다.
+
+## 완벽 공략 7. 객체 얼리기 (freezing)
+
+임의의 객체를 불변 객체로 만들어주는 기능. (javascript)
+
+- Object.freeze()에 전달한 객체는 그뒤로 변경될 수 없다.
+    - 새 프로퍼티를 추가하지 못함
+    - 기존 프로퍼티를 제거하지 못함
+    - 기존 프로퍼티 값을 변경하지 못함
+    - 프로토타입을 변경하지 못함
+- strict 모드에서만 동작함
+- 비슷한 류의 펑션으로 Object.seal()과 Object.preverntExtensions()가 있다.
+- java 진영에서 구현하려면 freeze 상태를 구분할 수 있는 필드값을 놓고 다른 필드를 수정할 때마다 freeze 상태를 체크하는 로직으로 구현
+    - 하지만 거의 쓰지 않음
+    - 그 이유는 가변객체에서 freezing을 하고 불변객체를 만드는 것인데, 언제 오퍼레이션이 됐는지 확인하기 어렵고 매우 이해하기 힘든 구조가될 가능성 높음
+
+## 완벽 공략 8. 빌더 패턴
+
+동일한 프로세스를 거쳐 다양한 구성의 인스턴스를 만드는 방법.
+
+- 복잡한 객체를 만드는 프로세스를 독립적으로 분리할 수 있다.
+
+![](../../../../../../../img/item02/img_1.png)
+
+- 빌더 인터페이스
+
+```java
+public interface TourPlanBuilder {
+    TourPlanBuilder nightsAndDays(int nights, int days);
+
+    TourPlanBuilder title(String title);
+
+    TourPlanBuilder startDate(LocalDate localDate);
+
+    TourPlanBuilder whereToStay(String whereToStay);
+
+    TourPlanBuilder addPlan(int day, String plan);
+
+    TourPlan getPlan();
+}
+```
+
+- 빌더 구현체
+
+```java
+public class DefaultTourBuilder implements TourPlanBuilder {
+    private String title;
+    private int nights;
+    private int days;
+    private LocalDate startDate;
+    private String whereToStay;
+    private List<DetailPlan> plans;
+
+    @Override
+    public TourPlanBuilder nightsAndDays(int nights, int days) {
+        this.nights = nights;
+        this.days = days;
+        return this;
+    }
+
+    @Override
+    public TourPlanBuilder title(String title) {
+        this.title = title;
+        return this;
+    }
+
+    @Override
+    public TourPlanBuilder startDate(LocalDate startDate) {
+        this.startDate = startDate;
+        return this;
+    }
+
+    @Override
+    public TourPlanBuilder whereToStay(String whereToStay) {
+        this.whereToStay = whereToStay;
+        return this;
+    }
+
+    @Override
+    public TourPlanBuilder addPlan(int day, String plan) {
+        if (this.plans == null) {
+            this.plans = new ArrayList<>();
+        }
+
+        this.plans.add(new DetailPlan(day, plan));
+        return this;
+    }
+
+    @Override
+    public TourPlan getPlan() {
+        return new TourPlan(title, nights, days, startDate, whereToStay, plans);
+    }
+}
+```
+
+- 빌더 디렉터
+
+```java
+public class TourDirector {
+    private TourPlanBuilder tourPlanBuilder;
+
+    public TourDirector(TourPlanBuilder tourPlanBuilder) {
+        this.tourPlanBuilder = tourPlanBuilder;
+    }
+
+    public TourPlan cancunTrip() {
+        return tourPlanBuilder.title("칸쿤 여행")
+                .nightsAndDays(2, 3)
+                .startDate(LocalDate.of(2020, 12, 9))
+                .whereToStay("리조트")
+                .addPlan(0, "체크인하고 짐 풀기")
+                .addPlan(0, "저녁 식사")
+                .getPlan();
+    }
+
+    public TourPlan longBeachTrip() {
+        return tourPlanBuilder.title("롱비치")
+                .startDate(LocalDate.of(2021, 7, 15))
+                .getPlan();
+    }
+}
+```
+
+- 디렉터 사용 코드
+
+```java
+public class App {
+    public static void main(String[] args) {
+        TourDirector director = new TourDirector(new DefaultTourBuilder());
+        TourPlan cancunPlan = director.cancunTrip();
+        TourPlan longBeachPlan = director.longBeachTrip();
+    }
+}
+```
