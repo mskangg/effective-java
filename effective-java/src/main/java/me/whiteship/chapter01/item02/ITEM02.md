@@ -2,9 +2,9 @@
 
 ## 핵심 정리
 
-### 정적 팩토리와 생성자에 선택적 매개변수가 많을 때 고려할 수 있는 방안
+## 정적 팩토리와 생성자에 선택적 매개변수가 많을 때 고려할 수 있는 방안
 
-#### 대안1: 점층적 생성자 패턴 또는 생성자 체이닝
+### 대안1: 점층적 생성자 패턴 또는 생성자 체이닝
 
 - 매개변수가 늘어나면 클라이언트 코드를 작성하거나 읽기 어렵다.
 
@@ -50,7 +50,7 @@ public class NutritionFacts {
 
 ```
 
-#### 대안2: 자바빈즈 패턴
+### 대안2: 자바빈즈 패턴
 
 - 완전한 객체를 만들려면 메서드를 여러번 호출해야 한다. (일관성이 무너진 상태가 될 수도 있다.)
 - 클래스를 불변으로 만들 수 없다.
@@ -108,3 +108,203 @@ public class NutritionFacts {
     }
 }
 ```
+
+### 권장하는 방법: 빌더 패턴
+
+```java
+// 코드 2-3 빌더 패턴 - 점층적 생성자 패턴과 자바빈즈 패턴의 장점만 취했다. (17~18쪽)
+public class NutritionFacts {
+    private final int servingSize;
+    private final int servings;
+    private final int calories;
+    private final int fat;
+    private final int sodium;
+    private final int carbohydrate;
+
+    public static void main(String[] args) {
+        NutritionFacts cocaCola = new Builder(240, 8)
+                .calories(100)
+                .sodium(35)
+                .carbohydrate(27).build();
+    }
+
+    public static class Builder {
+        // 필수 매개변수
+        private final int servingSize;
+        private final int servings;
+
+        // 선택 매개변수 - 기본값으로 초기화한다.
+        private int calories = 0;
+        private int fat = 0;
+        private int sodium = 0;
+        private int carbohydrate = 0;
+
+        public Builder(int servingSize, int servings) {
+            this.servingSize = servingSize;
+            this.servings = servings;
+        }
+
+        public Builder calories(int val) {
+            calories = val;
+            return this;
+        }
+
+        public Builder fat(int val) {
+            fat = val;
+            return this;
+        }
+
+        public Builder sodium(int val) {
+            sodium = val;
+            return this;
+        }
+
+        public Builder carbohydrate(int val) {
+            carbohydrate = val;
+            return this;
+        }
+
+        public NutritionFacts build() {
+            return new NutritionFacts(this);
+        }
+    }
+
+    private NutritionFacts(Builder builder) {
+        servingSize = builder.servingSize;
+        servings = builder.servings;
+        calories = builder.calories;
+        fat = builder.fat;
+        sodium = builder.sodium;
+        carbohydrate = builder.carbohydrate;
+    }
+}
+```
+
+- 점층적 생성자보다 클라이언트 코드를 읽고 쓰기가 훨씬 간결하고, 자바빈즈 보다 훨씬 안전하다.
+- 플루언트 API 또는 메서드 체이닝을 한다. (this를 리턴하기 때문)
+- 계층적으로 설계된 클래스와 함께 사용하기 좋다.
+
+```java
+// 코드 2-4 계층적으로 설계된 클래스와 잘 어울리는 빌더 패턴 (19쪽)
+// 참고: 여기서 사용한 '시뮬레이트한 셀프 타입(simulated self-type)' 관용구는 빌더뿐 아니라 임의의 유동적인 계층구조를 허용한다.
+public abstract class Pizza {
+    public enum Topping {HAM, MUSHROOM, ONION, PEPPER, SAUSAGE}
+
+    final Set<Topping> toppings;
+
+    abstract static class Builder<T extends Builder<T>> {
+        EnumSet<Topping> toppings = EnumSet.noneOf(Topping.class);
+
+        public T addTopping(Topping topping) {
+            toppings.add(Objects.requireNonNull(topping));
+            return self();
+        }
+
+        abstract Pizza build();
+
+        // 하위 클래스는 이 메서드를 재정의(overriding)하여 "this"를 반환하도록 해야 한다.
+        protected abstract T self();
+    }
+
+    Pizza(Builder<?> builder) {
+        toppings = builder.toppings.clone(); // 아이템 50 참조
+    }
+}
+
+// 코드 2-6 칼초네 피자 - 계층적 빌더를 활용한 하위 클래스 (20~21쪽)
+public class Calzone extends Pizza {
+    private final boolean sauceInside;
+
+    public static class Builder extends Pizza.Builder<Builder> {
+        private boolean sauceInside = false; // 기본값
+
+        public Builder sauceInside() {
+            sauceInside = true;
+            return this;
+        }
+
+        @Override
+        public Calzone build() {
+            return new Calzone(this);
+        }
+
+        @Override
+        protected Builder self() {
+            return this;
+        }
+    }
+
+    private Calzone(Builder builder) {
+        super(builder);
+        sauceInside = builder.sauceInside;
+    }
+
+    @Override
+    public String toString() {
+        return String.format("%s로 토핑한 칼초네 피자 (소스는 %s에)",
+                toppings, sauceInside ? "안" : "바깥");
+    }
+}
+
+// 계층적 빌더 사용 (21쪽)
+public class PizzaTest {
+    public static void main(String[] args) {
+        Calzone calzone = new Calzone.Builder()
+                .addTopping(HAM)
+                .sauceInside()
+                .build();
+
+        System.out.println(calzone);
+    }
+}
+```
+
+- @Builder <- 롬복의 빌더로 코드의 양을 줄일 순 있지만, 두가지 차이점이 존재한다.
+    1. 모든 매개변수를 받는 생성자가 생성됨
+        - @AllArgsConstructor(access = AccessLevel.PRIVATE) 로 외부에서 호출을 막게 할 수 있다.
+    2. 필수 값을 설정할 수 있는 방법이 없음
+
+```java
+// 코드 2-3 빌더 패턴 - 점층적 생성자 패턴과 자바빈즈 패턴의 장점만 취했다. (17~18쪽)
+@Builder
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
+public class NutritionFactsLombok {
+    private final int servingSize;
+    private final int servings;
+    private final int calories;
+    private final int fat;
+    private final int sodium;
+    private final int carbohydrate;
+
+    public static void main(String[] args) {
+        NutritionFactsLombok cocaCola = NutritionFactsLombok.builder() // 롬복 빌더는 필수 매개변수 설정을 할 수 없다.
+                .servingSize(240)
+                .servings(8)
+                .calories(100)
+                .sodium(35)
+                .carbohydrate(27)
+                .build();
+    }
+}
+```
+
+## 완벽 공략
+
+p15, 자바빈즈, 게터, 세터
+p17, 객체 얼리기 (freezing)
+p17, 빌더 패턴
+p19, IllegalArgumentException
+P21, 가변인수 (varargs) 매개변수를 여러 개 사용할 수 있다.
+
+## 완벽 공략 6. 자바빈(JavaBean)이란?
+
+재사용 가능한 소프트웨어 컴포넌트 (주로 GUI에서)
+
+![](../../../../../../../img/item02/img.png)
+
+- java.beans 패키지 안에 있는 모든 것
+- 그 중에서도 자바빈이 지켜야 할 규약
+- args 없는 기본 생성자 getter 와 setter 메소드 이름 규약 Serializable 인터페이스 구현
+    - 대표적으로 @RequestBody에서 사용되는 ObjectMapper가 기본생성자로 객체를 생성하고 자바빈 규약에 맞게 설정된 getter를 찾아 필드를 바인딩한다.
+- 하지만 실제로 오늘날 자바빈 스팩 중에서도 기본생성자와 getter, setter가 주로 쓰는 이유는?
+    - JPA나 스프링과 같은 여러 프레임워크에서 리플렉션을 통해 특정 객체의 값을 조회하거나 설정하기 때문입니다.

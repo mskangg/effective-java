@@ -12,8 +12,10 @@ public class PizzaTest {
                 .addTopping(ONION).build();
 
         Calzone calzone = new Calzone.Builder()
-                .addTopping(HAM).sauceInside().build();
-        
+                .addTopping(HAM)
+                .sauceInside()
+                .build();
+
         System.out.println(pizza);
         System.out.println(calzone);
     }
